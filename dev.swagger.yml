@@ -22,7 +22,7 @@ paths:
               type: "string"
       x-amazon-apigateway-integration:
         type: "aws"
-        uri: "arn:aws:apigateway:ap-northeast-2:lambda:path/2015-03-31/functions/arn:aws:lambda:ap-northeast-2:314757280827:function:TestApp_CFT/invocations"
+        uri: "arn:aws:apigateway:ap-northeast-2:lambda:path/2015-03-31/functions/arn:aws:lambda:ap-northeast-2:772776933351:function:TestApp_CFT/invocations"
         httpMethod: "GET"
         responses:
           default:
