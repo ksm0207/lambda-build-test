@@ -1,0 +1,49 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+    commands:
+      # Upgrade AWS CLI to the latest version
+      - pip install --upgrade awscli
+      - aws cloudformation package --template-file $DEPLOY_SERVER.samTemplate.yml --s3-bucket $S3_BUCKET_NAME --output-template-file $DEPLOY_SERVER.outputSamTemplate.yml
+
+  build:
+    commands:
+      ####### Layer Upload #######
+      - cd Layers
+      - zip -rq ../layers.zip .
+      - cd ..
+      - echo "packaging done"
+      - echo "uploading layers.zip to S3..."
+      - aws s3 cp layers.zip s3://$S3_BUCKET_NAME/$S3_FOLDER_NAME/
+      - echo "upload done"
+
+      ####### Layer Deploy #######
+      - echo "Begin Layer deploy"
+      - aws lambda publish-layer-version --layer-name KorDev_Event_Module --description "KorDev_Event_Layer" --license-info "MIT" --content S3Bucket=$S3_BUCKET_NAME,S3Key=KorDev_Event_Lambda/layers.zip --compatible-runtimes python3.6 python3.7 python3.8 python3.9 python3.10 python3.11
+      - echo "End Layer deploy"
+
+      ####### Swagger Upload #######
+      - echo "uploading Swagger to S3..."
+      - aws s3 cp dev.swagger.yml s3://$S3_BUCKET_NAME/$S3_FOLDER_NAME/
+      - echo "upload done"
+
+      ####### 01 Lambda Upload #######
+      - mkdir package
+      - cp Lambda/FirstApp_CFT/*.py package
+      - cd package
+      - zip -rq ../FirstApp_CFT.zip .
+      - cd ..
+      - rm -rf package
+      - echo "packaging done"
+      - echo "uploading FirstApp_CFT.zip to S3..."
+      - aws s3 cp FirstApp_CFT.zip s3://$S3_BUCKET_NAME/$S3_FOLDER_NAME/
+      - echo "upload done"
+
+
+artifacts:
+  type: zip
+  files:
+    - $DEPLOY_SERVER.samTemplate.yml
+    - $DEPLOY_SERVER.outputSamTemplate.yml

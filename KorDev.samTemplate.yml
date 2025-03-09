@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+Description: An AWS Serverless Specification template describing your function.
+
+Globals:
+  Api:
+    # enable CORS; to make more specific, change the origin wildcard
+    # to a particular domain name, e.g. "'www.example.com'"
+    Cors:
+      AllowMethods: "'*'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
+
+Resources:
+  KorDevEventMaskPromotionAbo:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      CodeUri: s3://kor-dev-deploy/KorDev_Event_Lambda/Event_Mask_Promotion_Abo_CFT.zip
+      FunctionName: "KorDev_Event_Mask_Promotion_Abo_CFT"
+      Description: "KorDev_Event_Lambda_01"
+      MemorySize: 128
+      Timeout: 20
+      Role: "arn:aws:iam::314757280827:role/KorDevEventLambda"
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /mask-promotion/main
+            Method: POST
+            RestApiId:
+              Ref: ApiGatewayApi
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-08753b1ac58820243
+        SubnetIds:
+          - subnet-eb8f5e82
+          - subnet-11c2d35b
+      Environment:
+        Variables:
+          ENV: dev
+      Tags:
+        Environment: Preprod
+        ApplicationID: APP3151108
+        
+  libs:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: KorDev_Event_Module
+      Description: KorDev_Event_Layer
+      ContentUri: s3://kor-dev-deploy/KorDev_Event_Lambda/layers.zip
+      CompatibleRuntimes:
+        - python3.11
+        - python3.10
+        - python3.9
+        - python3.8
+        - python3.7
+        - python3.6
+
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      # Allows www.example.com to call these APIs
+      # SAM will automatically add AllowMethods with a list of methods for this API
+      Cors: "'*'"
+      DefinitionBody: # Pull in an OpenApi definition from S3
+        "Fn::Transform":
+          Name: "AWS::Include"
+          # Replace "bucket" with your bucket name
+          Parameters:
+            Location: s3://kor-dev-deploy/KorDev_Event_Lambda/dev.swagger.yml
+      EndpointConfiguration: REGIONAL
+      StageName: "v2"

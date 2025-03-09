@@ -1,0 +1,40 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+    commands:
+      # Upgrade AWS CLI to the latest version
+      - pip install --upgrade awscli
+      - aws cloudformation package --template-file $DEPLOY_SERVER.samTemplate.yml --s3-bucket $S3_BUCKET_NAME --output-template-file $DEPLOY_SERVER.outputSamTemplate.yml
+
+  build:
+    commands:
+    
+      ####### Layer Version Update #######
+      - echo "Get layer version"
+      - aws lambda list-layer-versions --layer-name KorDev_Event_Module | grep "Version" | grep -v "LayerVersionArn" | grep -v "LayerVersions" | head -1 | awk -F ':' '{print $2}' | sed 's/,//g' | sed 's/ //g' >> latest-layer-version.txt
+      - more latest-layer-version.txt
+      - export LATESTLAYERVERSION=`cat latest-layer-version.txt`
+      - echo $LATESTLAYERVERSION
+      - echo "Get layer version done"
+
+      ###### 01 Lambda Deploy #######
+      - echo "deploying Lambda"
+      - aws lambda update-function-code --function-name TestApp_CFT --s3-bucket $S3_BUCKET_NAME --s3-key $S3_FOLDER_NAME/FirstApp_CFT.zip
+      - sleep 25
+      - aws lambda update-function-configuration --function-name TestApp_CFT --layers arn:aws:lambda:ap-northeast-2:314757280827:layer:KorDev_Event_Module:$LATESTLAYERVERSION
+      - echo "deploy done"
+
+      # ####### Layer Old Version Delete #######
+      # - echo "Delete old layer version"
+      # - export DELETEOLDLAYER=$((`cat latest-layer-version.txt` - 1))
+      # - echo $DELETEOLDLAYER
+      # - aws lambda delete-layer-version --layer-name KorDev_Event_Module --version-number `echo $DELETEOLDLAYER`
+      # - echo "Delete old layer version(-1) done"
+
+artifacts:
+  type: zip
+  files:
+    - $DEPLOY_SERVER.samTemplate.yml
+    - $DEPLOY_SERVER.outputSamTemplate.yml
